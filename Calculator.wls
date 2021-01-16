@@ -67,291 +67,236 @@ s = "y 	1
 starTable = # -> <|"a" -> ToExpression@#2|> & @@@ StringSplit[StringSplit[s, "\n"]] // Association;
 
 
-fToLevel[llf_, assoc_] := Ramp@Floor[((llf - Log10[Log10[2]])/Log10[2] - assoc["b"])/assoc["a"] + 1]
+fToLevel[llf_, assoc_] :=
+	Ramp @ Floor[((llf - Log10[Log10[2]]) / Log10[2] - assoc["b"]) / assoc["a"] + 1]
 
 
 getExponent[l_] :=
-	Which[l < 10,    0,
-		  l < 25,    1,
-		  l < 1500,  l/25 + 1,
-		  l < 6000,  l/50 + 31,
-		  l < 10000, l/100 + 91,
-		  l < 24000, l/200 + 141,
-		  True,      l/400 + 201
+	Which[
+		l < 10,
+			0
+		,
+		l < 25,
+			1
+		,
+		l < 1500,
+			l / 25 + 1
+		,
+		l < 6000,
+			l / 50 + 31
+		,
+		l < 10000,
+			l / 100 + 91
+		,
+		l < 24000,
+			l / 200 + 141
+		,
+		True,
+			l / 400 + 201
 	] // Floor
 
 
 toNextExponent[l_] :=
-	Which[l < 10,    10 - l,
-		  l < 25,    25 - l,
-		  l < 1500,  Mod[-l, 25, 1],
-		  l < 6000,  Mod[-l, 50, 1],
-		  l < 10000, Mod[-l, 100, 1],
-		  l < 24000, Mod[-l, 200, 1],
-		  True,      Mod[-l, 400, 1]
+	Which[
+		l < 10,
+			10 - l
+		,
+		l < 25,
+			25 - l
+		,
+		l < 1500,
+			Mod[-l, 25, 1]
+		,
+		l < 6000,
+			Mod[-l, 50, 1]
+		,
+		l < 10000,
+			Mod[-l, 100, 1]
+		,
+		l < 24000,
+			Mod[-l, 200, 1]
+		,
+		True,
+			Mod[-l, 400, 1]
 	]
 
 
 totalVar[l_] := totalVar[l] = l*2^getExponent[l]
 
 
-starCost[cur_, d_, a_] :=
- Sum[Floor[a (cur + i) Exp[a (cur + i)/200] + 1], {i, 0, d - 1}]
+starCost[cur_, d_, a_] := Sum[Floor[a (cur + i) Exp[a (cur + i)/200] + 1], {i, 0, d - 1}]
 
 
-(* ::Code::Initialization:: *)
-calcoptBLP[llf_,initstars_,ex_:0]:=Block[
-{vars,ups,upsc,calcpow2,calcpows,iter,dumpf,base,
-
-len=Length[varTable],
-starTable=(Values/*First)/@starTable//Values,
-
-format,
-
-prereqs,
-getcons,
-prereqm,
-prereqb,
-co,
-po,
-le,
-lpo,
-c,m,b,
-
-initpow,
-
-stars,
-resx,
-resv,
-
-heux,
-heuv,
-
-myFirst,
-myLast,
-
-$toler=10^-9,
-
-pows,
-powsd,
-ress,
-grid,
-
-weakThreshold,
-weaks,
-strongThreshold,
-strongs,
-getconsSingle,
-resx2,
-
-exps,
-postpow,
-coeff=1.1,
-
-myprint=Sow@*Row@*List
-
-},
-
-exps=SparseArray[i_/;i<=ex:>(coeff)^-(ex-i+1),len,1];
-
-vars=fToLevel[llf,#]&/@varTable//Values;
-ups=fToLevel[llf,#]+1&/@upTable//Values;
-
-upsc=FoldList[Times,1,Rest[ups]^Most[exps]]//N;
-
-calcpows[vv_]:=upsc (totalVar/@vv)^exps;
-calcpow2[vv_]:=calcpow2[vv]=Total[calcpows[vv]];
-postpow[p_]:=p^((coeff)^ex);
-(* off by power of 1.1^exp? *)
-
-format[l_]:=MapThread[Rule,{Keys[varTable],l}]//Association;
-
-getcons[i_,s_,prog_:0,costs_:{},pows_:{},progs_:{}]:=Block[
-{nprog,cost,pow},
-
-nprog=prog+toNextExponent[vars[[i]]+prog];
-cost=starCost[0,nprog,starTable[[i]]];
-pow=upsc[[i]](totalVar[vars[[i]]+nprog]^exps[[i]]-totalVar[vars[[i]]]^exps[[i]])//N;
-
-If[cost>s,
-{costs,pows,progs},
-getcons[i,s,nprog,Append[costs,cost],Append[pows,pow],Append[progs,nprog]]
-]
-];
-
-getconsSingle[i_,s_,init_,prog_:0,costs_:{},pows_:{},progs_:{}]:=Block[
-{nprog,cost,pow},
-
-nprog=prog+1;
-cost=starCost[init,nprog,starTable[[i]]];
-pow=upsc[[i]](totalVar[vars[[i]]+init+nprog]^exps[[i]]-totalVar[vars[[i]]+init]^exps[[i]])//N;
-
-If[cost>s,
-{costs,pows,progs},
-getconsSingle[i,s,init,nprog,Append[costs,cost],Append[pows,pow],Append[progs,nprog]]
-]
-];
-
-prereqm[l_]:=prereqm[l]=
-If[l==0,
-{},
-{ConstantArray[-1,l]}
-];
-
-prereqb[l_]:=prereqb[l]=
-If[l==0,
-0,
--1
-];
-
-Do[
-{co[i],po[i],le[i]}=getcons[i,initstars];
-lpo[i]=Length[po[i]],
-
-{i,len}
-];
-
-m=ArrayFlatten@ReplacePart[
-ConstantArray[0,{len+1,len}],
-{
-{i_,i_}:>prereqm[lpo[i]],
-{len+1,i_}:>{-co[i]}
-}
-];
-b=Append[
-Array[prereqb@*lpo,len],
--initstars
-];
-c=-Array[po,len,1,Join];
-
-m=DeleteCases[m,{0..}];
-b=DeleteCases[b,0];
-
-(* Emergency halt if there is no upgrade whatsoever *)
-If[Array[lpo,len,1,Plus]==0,Return[{format@ConstantArray[0,len],0}]];
-
-myLast[l_List]:=If[Length[l]==0,-Infinity,Last@l];
-
-heux=With[
-{pos=With[{arr=Array[myLast@*po,len]},First@FirstPosition[arr,Max@arr]]},
-Array[If[#==pos,
-SparseArray[-1->1,lpo[#]],
-SparseArray[{},lpo[#]]
-]&,len,1,Join]
-];
-heuv=heux . c;
-
-resx=LinearProgramming[Normalize@c,m,b,Automatic,Integers,Tolerance->$toler];
-
-resx=Internal`PartitionRagged[resx,Array[lpo,len]];
-
-myFirst[l_List]:=If[Length[l]==0,0,First@l];
-ress=myFirst/@Pick[Array[co,len],resx,1];
-resx=myFirst/@Pick[Array[le,len],resx,1];
-
-weakThreshold=2*Max[calcpows[resx+vars]/(resx+vars)];
-weaks=Position[calcpows[resx+vars],_?(NumericQ@#&&#<=weakThreshold&),{1},Heads->False];
-
-ress=ReplacePart[ress,weaks->0];
-resx=ReplacePart[resx,weaks->0];
-
-(*strongThreshold=0.01;
-strongs=Position[calcpows[resx+vars]/(resx+vars),_?(NumericQ@#&&#\[GreaterEqual]strongThreshold&),{1},Heads\[Rule]False];*)
-
-(*strongs=List/@Ordering[calcpows[resx+vars]/(resx+vars),-5];*)
-strongs=Complement[List/@Range[len],weaks];
-
-(*Print[initstars-Total@ress];*)
-
-Do[
-{co[i],po[i],le[i]}=
-Which[MemberQ[strongs,{i}],
-getconsSingle[i,initstars-Total@ress,resx[[i]]],
-MemberQ[weaks,{i}],
-getcons[i,initstars-Total@ress],
-True,
-{{},{},{}}
-];
-
-(*If[MemberQ[strongs,{i}],Print[Keys[varTable][[i]],po[i]]];*)
-
-lpo[i]=Length[po[i]],
-
-{i,len}
-];
-
-m=ArrayFlatten@ReplacePart[
-ConstantArray[0,{len+1,len}],
-{
-{i_,i_}:>prereqm[lpo[i]],
-{len+1,i_}:>{-co[i]}
-}
-];
-b=Append[
-Array[prereqb@*lpo,len],
-Total@ress-initstars
-];
-c=-Array[po,len,1,Join];
-
-m=DeleteCases[m,{0..}];
-b=DeleteCases[b,0];
-
-resx2=LinearProgramming[Normalize@c,m,b,Automatic,Integers,Tolerance->$toler];
-
-resx2=Internal`PartitionRagged[resx2,Array[lpo,len]];
-
-ress+=myFirst/@Pick[Array[co,len],resx2,1];
-resx+=myFirst/@Pick[Array[le,len],resx2,1];
-
-initpow=calcpow2[vars];
-
-resv=calcpow2[vars+resx];
-heuv=initpow-heuv;
-
-resv=postpow@resv;
-heuv=postpow@heuv;
-
-myprint["dump y: ",heuv];
-myprint["found y: ",resv];
-myprint["speedup: ",PercentForm[resv/heuv-1,{Infinity,4}]];
-myprint["stars used: ", Total@ress];
-myprint["stars left: ", initstars-Total@ress];
-(*Print@format[calcpows[resx+vars]/calcpow2[resx+vars]];*)
-
-pows=(calcpows[resx+vars])/calcpow2[resx+vars];
-powsd=(calcpows[resx+vars]-calcpows[vars])/calcpow2[resx+vars];
-
-grid={
-Keys[varTable],
-vars,
-resx+vars,
-NumberForm[#,Infinity,NumberSigns->{"-", "+"}]& /@resx,
-ress,
-PercentForm[#,{Infinity,4}]&/@pows,
-
-Table[
-Which[
-resx[[i]]==0,"none",
-powsd[[i]]>=0.01,"must",
-powsd[[i]]>=0.001,"high",
-powsd[[i]]>=0.0001,"medium",
-True,"low"],
-{i,len}
-]
-
-} // Transpose;
-
-grid=Prepend[grid,{"variable","level before","level after","level purchased","stars used","power after","priority"}];
-
-myprint[Grid[
-grid,
-Frame->All,
-Background->{None,
-Switch[Last@#,
-"must",LightRed,
-"high",LightYellow,
-"medium",LightGreen,
-True,None]&/@grid
-}
-]];
-]//Reap//Last//Last//Column;
+calcoptBLP[llf_, initstars_, ex_:0] :=
+	Block[{vars, ups, upsc, calcpow2, calcpows, iter, dumpf, base, len = Length[varTable], starTable = (Values /* First) /@ starTable // Values, format, prereqs, getcons, prereqm, prereqb, co, po, le, lpo, c, m, b, initpow, stars, resx, resv, heux, heuv, myFirst, myLast, $toler = 10^-9, pows, powsd, ress, grid, weakThreshold, weaks, strongThreshold, strongs, getconsSingle, resx2, exps, postpow, coeff = 1.1, myprint = Sow @* Row @* List},
+		exps = SparseArray[i_ /; i <= ex :> (coeff)^-(ex - i + 1), len, 1];
+		vars = fToLevel[llf, #]& /@ varTable // Values;
+		ups = fToLevel[llf, #] + 1& /@ upTable // Values;
+		upsc = FoldList[Times, 1, Rest[ups]^Most[exps]] // N;
+		calcpows[vv_] :=
+			upsc (totalVar /@ vv)^exps;
+		calcpow2[vv_] := calcpow2[vv] =
+			Total[calcpows[vv]];
+		postpow[p_] :=
+			p^((coeff)^ex); (* off by power of 1.1^exp? *)
+		format[l_] :=
+			MapThread[Rule, {Keys[varTable], l}] // Association;
+		getcons[i_, s_, prog_:0, costs_:{}, pows_:{}, progs_:{}] :=
+			Block[{nprog, cost, pow},
+				nprog = prog + toNextExponent[vars[[i]] + prog];
+				cost = starCost[0, nprog, starTable[[i]]];
+				pow = upsc[[i]] (totalVar[vars[[i]] + nprog]^exps[[i]] - totalVar[vars[[i]]]^exps[[i]]) // N;
+				If[cost > s,
+					{costs, pows, progs}
+					,
+					getcons[i, s, nprog, Append[costs, cost], Append[pows, pow], Append[progs, nprog]]
+				]
+			];
+		getconsSingle[i_, s_, init_, prog_:0, costs_:{}, pows_:{}, progs_:{}] :=
+			Block[{nprog, cost, pow},
+				nprog = prog + 1;
+				cost = starCost[init, nprog, starTable[[i]]];
+				pow = upsc[[i]] (totalVar[vars[[i]] + init + nprog]^exps[[i]] - totalVar[vars[[i]] + init]^exps[[i]]) // N;
+				If[cost > s,
+					{costs, pows, progs}
+					,
+					getconsSingle[i, s, init, nprog, Append[costs, cost], Append[pows, pow], Append[progs, nprog]]
+				]
+			];
+		prereqm[l_] := prereqm[l] =
+			If[l == 0,
+				{}
+				,
+				{ConstantArray[-1, l]}
+			];
+		prereqb[l_] := prereqb[l] =
+			If[l == 0,
+				0
+				,
+				-1
+			];
+		Do[
+			{co[i], po[i], le[i]} = getcons[i, initstars]; lpo[i] = Length[po[i]], {i, len}
+		];
+		m = ArrayFlatten @ ReplacePart[
+			ConstantArray[0, {len + 1, len}], {
+				{i_, i_} :> prereqm[lpo[i]], {len + 1, i_} :> {-co[i]}
+			}
+		];
+		b = Append[
+			Array[prereqb @* lpo, len], -initstars
+		];
+		c = -Array[po, len, 1, Join];
+		m = DeleteCases[m, {0 ..}];
+		b = DeleteCases[b, 0];
+		myLast[l_List] :=
+			If[Length[l] == 0,
+				-Infinity
+				,
+				Last @ l
+			];
+		heux = With[{pos = With[{arr = Array[myLast @* po, len]},
+				First @ FirstPosition[arr, Max @ arr]
+			]},
+			Array[If[# == pos,
+					SparseArray[-1 -> 1, lpo[#]]
+					,
+					SparseArray[{}, lpo[#]]
+				]&, len, 1, Join
+			]
+		];
+		heuv = heux . c;
+		resx = LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler];
+		resx = Internal`PartitionRagged[resx, Array[lpo, len]];
+		myFirst[l_List] :=
+			If[Length[l] == 0,
+				0
+				,
+				First @ l
+			];
+		ress = myFirst /@ Pick[Array[co, len], resx, 1];
+		resx = myFirst /@ Pick[Array[le, len], resx, 1];
+		weakThreshold = 2 * Max[calcpows[resx + vars] / (resx + vars)];
+		weaks = Position[calcpows[resx + vars], _?(NumericQ @ # && # <= weakThreshold&), {1}, Heads -> False];
+		ress = ReplacePart[ress, weaks -> 0];
+		resx = ReplacePart[resx, weaks -> 0];
+		strongs = Complement[List /@ Range[len], weaks];
+		Do[
+			{co[i], po[i], le[i]} = Which[
+				MemberQ[strongs, {i}],
+					getconsSingle[i, initstars - Total @ ress, resx[[i]]]
+				,
+				MemberQ[weaks, {i}],
+					getcons[i, initstars - Total @ ress]
+				,
+				True,
+					{{}, {}, {}}
+			];
+			lpo[i] = Length[po[i]], {i, len}
+		];
+		m = ArrayFlatten @ ReplacePart[
+			ConstantArray[0, {len + 1, len}], {
+				{i_, i_} :> prereqm[lpo[i]], {len + 1, i_} :> {-co[i]}
+			}
+		];
+		b = Append[
+			Array[prereqb @* lpo, len], Total @ ress - initstars
+		];
+		c = -Array[po, len, 1, Join];
+		m = DeleteCases[m, {0 ..}];
+		b = DeleteCases[b, 0];
+		resx2 = LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler];
+		resx2 = Internal`PartitionRagged[resx2, Array[lpo, len]];
+		ress += myFirst /@ Pick[Array[co, len], resx2, 1];
+		resx += myFirst /@ Pick[Array[le, len], resx2, 1];
+		initpow = calcpow2[vars];
+		resv = calcpow2[vars + resx];
+		heuv = initpow - heuv;
+		resv = postpow @ resv;
+		heuv = postpow @ heuv;
+		myprint["dump y: ", heuv];
+		myprint["found y: ", resv];
+		myprint["speedup: ", PercentForm[resv / heuv - 1, {Infinity, 4}]];
+		myprint["stars used: ", Total @ ress];
+		myprint["stars left: ", initstars - Total @ ress];
+		pows = (calcpows[resx + vars]) / calcpow2[resx + vars];
+		powsd = (calcpows[resx + vars] - calcpows[vars]) / calcpow2[resx + vars];
+		grid = {
+			Keys[varTable], vars, resx + vars, NumberForm[#, Infinity, NumberSigns -> {"-", "+"}]& /@ resx, ress, PercentForm[#, {Infinity, 4}]& /@ pows, Table[
+				Which[
+					resx[[i]] == 0,
+						"none"
+					,
+					powsd[[i]] >= 0.01,
+						"must"
+					,
+					powsd[[i]] >= 0.001,
+						"high"
+					,
+					powsd[[i]] >= 0.0001,
+						"medium"
+					,
+					True,
+						"low"
+				], {i, len}
+			]
+		} // Transpose;
+		grid = Prepend[grid, {"variable", "level before", "level after", "level purchased", "stars used", "power after", "priority"}];
+		myprint[Grid[
+			grid, Frame -> All, Background -> {
+				None, Switch[Last @ #,
+					"must",
+						LightRed
+					,
+					"high",
+						LightYellow
+					,
+					"medium",
+						LightGreen
+					,
+					_,
+						None
+				]& /@ grid
+			}
+		]];
+	] // Reap // Last // Last // Column;
