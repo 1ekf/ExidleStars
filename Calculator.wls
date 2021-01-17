@@ -68,7 +68,7 @@ starTable = # -> <|"a" -> ToExpression@#2|> & @@@ StringSplit[StringSplit[s, "\n
 
 
 fToLevel[llf_, assoc_] :=
-    Ramp @ Floor[((llf - Log10[Log10[2]]) / Log10[2] - assoc["b"]) / assoc["a"] + 1]
+    Ramp @ Floor[((llf - Log10[Log10[2]]) / Log10[2] - assoc["b"]) / assoc["a"] + 1];
 
 
 getExponent[l_] :=
@@ -93,7 +93,7 @@ getExponent[l_] :=
         ,
         True,
             l / 400 + 201
-    ] // Floor
+    ] // Floor;
 
 
 toNextExponent[l_] :=
@@ -118,14 +118,14 @@ toNextExponent[l_] :=
         ,
         True,
             Mod[-l, 400, 1]
-    ]
+    ];
 
 
-totalVar[l_] := totalVar[l] = l * 2^getExponent[l]
+totalVar[l_] := totalVar[l] = l * 2^getExponent[l];
 
 
 starCost[cur_, d_, a_] :=
-    Sum[Floor[a (cur + i) Exp[a (cur + i) / 200] + 1], {i, 0, d - 1}]
+    Sum[Floor[a (cur + i) Exp[a (cur + i) / 200] + 1], {i, 0, d - 1}];
 
 
 calcoptBLP[llf_, initstars_, ex_:0] :=
