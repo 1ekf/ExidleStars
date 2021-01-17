@@ -1,0 +1,9 @@
+      ], RasterSize -> 1000],
+    {"Base64", "PNG"},
+    "ColorMapLength" -> 32,
+    CompressionLevel -> 1,
+    Dithering -> None,
+    IncludeMetaInformation -> {}
+  ]~StringReplace~{"\n" -> ""}
+
+], 10]
