@@ -129,24 +129,21 @@ starCost[cur_, d_, a_] :=
 
 
 calcoptBLP[llf_, initstars_, ex_:0] :=
-    Block[{vars, ups, upsc, calcpow2, calcpows, iter, dumpf, base, len = Length[varTable], starTable = (Values /* First) /@ starTable // Values, format, prereqs, getcons, prereqm, prereqb, co, po, le, lpo, c, m, b, initpow, stars, resx, resv, heux, heuv, myFirst, myLast, $toler = 10^-9, pows, powsd, ress, grid, weakThreshold, weaks, strongThreshold, strongs, getconsSingle, resx2, exps, postpow, coeff = 1.1, myprint = Sow @* Row @* List},
-        exps = SparseArray[i_ /; i <= ex :> (coeff)^-(ex - i + 1), len, 1];
+    Block[{vars, ups, upsc, calcpow2, calcpows, iter, dumpf, base, len = Length[varTable], starTable = (Values /* First) /@ starTable // Values, format, prereqs, getcons, prereqm, prereqb, co, po, le, lpo, c, m, b, initpow, stars, resx, resv, heux, heuv, myFirst, myLast, $toler = 10^-9, pows, powsd, ress, grid, weakThreshold, weaks, strongThreshold, strongs, getconsSingle, resx2, myprint = Sow @* Row @* List},
         vars = fToLevel[llf, #]& /@ varTable // Values;
         ups = fToLevel[llf, #] + 1& /@ upTable // Values;
-        upsc = FoldList[Times, 1, Rest[ups]^Most[exps]] // N;
+        upsc = FoldList[Times, 1, Rest[ups]] // N;
         calcpows[vv_] :=
-            upsc (totalVar /@ vv)^exps;
+            upsc (totalVar /@ vv);
         calcpow2[vv_] := calcpow2[vv] =
             Total[calcpows[vv]];
-        postpow[p_] :=
-            p^((coeff)^ex); (* off by power of 1.1^exp? *)
         format[l_] :=
             MapThread[Rule, {Keys[varTable], l}] // Association;
         getcons[i_, s_, prog_:0, costs_:{}, pows_:{}, progs_:{}] :=
             Block[{nprog, cost, pow},
                 nprog = prog + toNextExponent[vars[[i]] + prog];
                 cost = starCost[0, nprog, starTable[[i]]];
-                pow = upsc[[i]] (totalVar[vars[[i]] + nprog]^exps[[i]] - totalVar[vars[[i]]]^exps[[i]]) // N;
+                pow = upsc[[i]] (totalVar[vars[[i]] + nprog] - totalVar[vars[[i]]]) // N;
                 If[cost > s,
                     {costs, pows, progs}
                     ,
@@ -157,7 +154,7 @@ calcoptBLP[llf_, initstars_, ex_:0] :=
             Block[{nprog, cost, pow},
                 nprog = prog + 1;
                 cost = starCost[init, nprog, starTable[[i]]];
-                pow = upsc[[i]] (totalVar[vars[[i]] + init + nprog]^exps[[i]] - totalVar[vars[[i]] + init]^exps[[i]]) // N;
+                pow = upsc[[i]] (totalVar[vars[[i]] + init + nprog] - totalVar[vars[[i]] + init]) // N;
                 If[cost > s,
                     {costs, pows, progs}
                     ,
@@ -253,8 +250,6 @@ calcoptBLP[llf_, initstars_, ex_:0] :=
         initpow = calcpow2[vars];
         resv = calcpow2[vars + resx];
         heuv = initpow - heuv;
-        resv = postpow @ resv;
-        heuv = postpow @ heuv;
         myprint["dump y: ", heuv];
         myprint["found y: ", resv];
         myprint["speedup: ", PercentForm[resv / heuv - 1, {Infinity, 4}]];
