@@ -1,6 +1,22 @@
 #!/usr/bin/env wolframscript
 (* ::Package:: *)
 
+(* ::Title:: *)
+(*Optimal Star Distribution Calculator*)
+
+
+(* ::Subtitle:: *)
+(*by Eaux Tacous#1021*)
+
+
+(* ::Section::Closed:: *)
+(*Constants*)
+
+
+(* ::Text:: *)
+(*Taken from exidle wiki.*)
+
+
 s = "y 	0.5 	-4.143474048424998
   z 	0.625 	-3.1709615006770515
   s 	0.78125 	1.732020845644619
@@ -67,6 +83,10 @@ s = "y 	1
 starTable = # -> <|"a" -> ToExpression@#2|> & @@@ StringSplit[StringSplit[s, "\n"]] // Association;
 
 
+(* ::Section::Closed:: *)
+(*Helper Functions*)
+
+
 fToLevel[llf_, assoc_] :=
     Ramp @ Floor[((llf - Log10[Log10[2]]) / Log10[2] - assoc["b"]) / assoc["a"] + 1];
 
@@ -128,7 +148,12 @@ starCost[cur_, d_, a_] :=
     Sum[Floor[a (cur + i) Exp[a (cur + i) / 200] + 1], {i, 0, d - 1}];
 
 
-calcoptBLP[llf_, initstars_, ex_:0] :=
+(* ::Section:: *)
+(*Main algorithm*)
+
+
+calcoptBLP[___] = $Failed;
+calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 && initstars >= 0 && ex >= 0 :=
     Block[{vars, ups, upsc, calcpow2, calcpows, iter, dumpf, base, len = Length[varTable], starTable = (Values /* First) /@ starTable // Values, format, prereqs, getcons, prereqm, prereqb, co, po, le, lpo, c, m, b, initpow, stars, resx, resv, heux, heuv, myFirst, myLast, $toler = 10^-9, pows, powsd, ress, grid, weakThreshold, weaks, strongThreshold, strongs, getconsSingle, resx2, myprint = Sow @* Row @* List},
         vars = fToLevel[llf, #]& /@ varTable // Values;
         ups = fToLevel[llf, #] + 1& /@ upTable // Values;
