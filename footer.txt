@@ -1,7 +1,7 @@
         ],
         10
       ],
-      RasterSize -> 1000],
+      RasterSize -> 1000, Background -> RGBColor["#222"]],
     {"Base64", "PNG"},
     "ColorMapLength" -> 32,
     CompressionLevel -> 1,
