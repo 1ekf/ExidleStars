@@ -1,5 +1,5 @@
-TimeConstrained[Print[
-
+Print[
   "data:image/png;base64,"~StringJoin~ExportString[
     Rasterize[
-      calcoptBLP[
+      TimeConstrained[
+        calcoptBLP[
