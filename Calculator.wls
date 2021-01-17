@@ -152,9 +152,10 @@ starCost[cur_, d_, a_] :=
 (*Main algorithm*)
 
 
-calcoptBLP[___] = $Failed;
+calcoptBLP[___] = Style["Invalid Input", Hue[{0, .8, .9}]];
 calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 && initstars >= 0 && ex >= 0 :=
-    Block[{vars, ups, upsc, calcpow2, calcpows, iter, dumpf, base, len = Length[varTable], starTable = (Values /* First) /@ starTable // Values, format, prereqs, getcons, prereqm, prereqb, co, po, le, lpo, c, m, b, initpow, stars, resx, resv, heux, heuv, myFirst, myLast, $toler = 10^-9, pows, powsd, ress, grid, weakThreshold, weaks, strongThreshold, strongs, getconsSingle, resx2, myprint = Sow @* Row @* List},
+    Block[{vars, ups, upsc, calcpow2, calcpows, iter, dumpf, base, len = Length[varTable], starTable = (Values /* First) /@ starTable // Values, format, prereqs, getcons, prereqm, prereqb, co, po, le, lpo, c, m, b, initpow, stars, resx, resv, heux, heuv, myFirst, myLast, $toler = 10^-9, pows, powsd, ress, grid, weakThreshold, weaks, strongThreshold, strongs, getconsSingle, resx2, myprint},
+        myprint = Sow @* (Style[#, RGBColor["#ccc"], Bold]&) @* Row @* List;
         vars = fToLevel[llf, #]& /@ varTable // Values;
         ups = fToLevel[llf, #] + 1& /@ upTable // Values;
         upsc = FoldList[Times, 1, Rest[ups]] // N;
@@ -289,7 +290,7 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
                         "none"
                     ,
                     powsd[[i]] >= 0.01,
-                        "must"
+                        "top"
                     ,
                     powsd[[i]] >= 0.001,
                         "high"
@@ -304,19 +305,25 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
         } // Transpose;
         grid = Prepend[grid, {"variable", "level before", "level after", "level purchased", "stars used", "power after", "priority"}];
         myprint[Grid[
-            grid, Frame -> All, Background -> {
-                None, Switch[Last @ #,
-                    "must",
-                        LightRed
+            grid, Frame -> All, ItemStyle -> {
+                Automatic, Switch[Last @ #,
+                    "top",
+                        Hue[{0, .8, .9}]
                     ,
                     "high",
-                        LightYellow
+                        Hue[{55/360, .65, .8}]
                     ,
                     "medium",
-                        LightGreen
+                        Hue[{1/3, .6, .6}]
+                    ,
+                    "low",
+                        Hue[{200/360, .1, .7}]
+                    ,
+                    "none",
+                        RGBColor["#888"]
                     ,
                     _,
-                        None
+                        Automatic
                 ]& /@ grid
             }
         ]];
