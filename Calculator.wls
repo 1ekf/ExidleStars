@@ -240,7 +240,7 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
             ];
         ress = myFirst /@ Pick[Array[co, len], resx, 1];
         resx = myFirst /@ Pick[Array[le, len], resx, 1];
-        weakThreshold = 2 * Max[calcpows[resx + vars] / (resx + vars)];
+        weakThreshold = 2 * Max[calcpows[resx + vars] / (resx + vars /. 0 -> Infinity)];
         weaks = Position[calcpows[resx + vars], _?(NumericQ @ # && # <= weakThreshold&), {1}, Heads -> False];
         ress = ReplacePart[ress, weaks -> 0];
         resx = ReplacePart[resx, weaks -> 0];
