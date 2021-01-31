@@ -9,7 +9,7 @@
 (*by Eaux Tacous#1021*)
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Constants*)
 
 
@@ -213,6 +213,11 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
         c = -Array[po, len, 1, Join];
         m = DeleteCases[m, {0 ..}];
         b = DeleteCases[b, 0];
+        If[Length[c] == 0,
+            Throw[
+                Style["No doubling found", Hue[{0, .8, .9}]]
+            ]
+        ];
         myLast[l_List] :=
             If[Length[l] == 0,
                 -Infinity
@@ -311,13 +316,13 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
                         Hue[{0, .8, .9}]
                     ,
                     "high",
-                        Hue[{55/360, .65, .8}]
+                        Hue[{55 / 360, .65, .8}]
                     ,
                     "medium",
-                        Hue[{1/3, .6, .6}]
+                        Hue[{1 / 3, .6, .6}]
                     ,
                     "low",
-                        Hue[{200/360, .1, .7}]
+                        Hue[{200 / 360, .1, .7}]
                     ,
                     "none",
                         RGBColor["#888"]
@@ -327,4 +332,4 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
                 ]& /@ grid
             }
         ]];
-    ] // Reap // Last // Last // Column;
+    ] // Reap // Last // Last // Column // Catch;
