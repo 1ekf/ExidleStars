@@ -9,7 +9,7 @@
 (*by Eaux Tacous#1021*)
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Constants*)
 
 
