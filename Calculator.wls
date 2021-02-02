@@ -215,7 +215,7 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
         b = DeleteCases[b, 0];
         If[Length[c] == 0,
             Throw[
-                Style["No doubling found", Hue[{0, .8, .9}]]
+                Style["Error: No doubling found", Hue[{0, .8, .9}]]
             ]
         ];
         myLast[l_List] :=
@@ -274,10 +274,12 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
         c = -Array[po, len, 1, Join];
         m = DeleteCases[m, {0 ..}];
         b = DeleteCases[b, 0];
-        resx2 = LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler];
-        resx2 = Internal`PartitionRagged[resx2, Array[lpo, len]];
-        ress += myFirst /@ Pick[Array[co, len], resx2, 1];
-        resx += myFirst /@ Pick[Array[le, len], resx2, 1];
+        If[Length[c] > 0,
+            resx2 = LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler];
+            resx2 = Internal`PartitionRagged[resx2, Array[lpo, len]];
+            ress += myFirst /@ Pick[Array[co, len], resx2, 1];
+            resx += myFirst /@ Pick[Array[le, len], resx2, 1];
+        ];
         initpow = calcpow2[vars];
         resv = calcpow2[vars + resx];
         heuv = initpow - heuv;
