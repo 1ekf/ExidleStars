@@ -312,7 +312,7 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
         } // Transpose;
         grid = Prepend[grid, {"variable", "level before", "level after", "\[CapitalDelta] level", "stars used", "power after", "priority"}];
         myprint[Grid[
-            grid, Frame -> All, ItemStyle -> {
+            grid, Frame -> All, FrameStyle -> Thin, ItemStyle -> {
                 Automatic, Switch[Last @ #,
                     "top",
                         Hue[{0, .8, .9}]
