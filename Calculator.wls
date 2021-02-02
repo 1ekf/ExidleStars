@@ -285,7 +285,7 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
         heuv = initpow - heuv;
         myprint["dump y: ", heuv];
         myprint["found y: ", resv];
-        myprint["speedup: ", PercentForm[resv / heuv - 1, {Infinity, 4}]];
+        myprint["speedup from dump: ", PercentForm[resv / heuv - 1, {Infinity, 4}]];
         myprint["stars used: ", Total @ ress];
         myprint["stars left: ", initstars - Total @ ress];
         pows = (calcpows[resx + vars]) / calcpow2[resx + vars];
@@ -310,7 +310,7 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
                 ], {i, len}
             ]
         } // Transpose;
-        grid = Prepend[grid, {"variable", "level before", "level after", "level purchased", "stars used", "power after", "priority"}];
+        grid = Prepend[grid, {"variable", "level before", "level after", "\[CapitalDelta] level", "stars used", "power after", "priority"}];
         myprint[Grid[
             grid, Frame -> All, ItemStyle -> {
                 Automatic, Switch[Last @ #,
