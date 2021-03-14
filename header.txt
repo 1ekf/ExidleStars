@@ -1,5 +1,1 @@
-Print[
-  "data:image/png;base64,"~StringJoin~ExportString[
-    Rasterize[
-      TimeConstrained[
-        calcoptBLP[
+calcoptBLPWrapper[

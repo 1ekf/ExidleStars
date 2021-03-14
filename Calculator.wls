@@ -83,15 +83,20 @@ s = "y 	1
 starTable = # -> <|"a" -> ToExpression@#2|> & @@@ StringSplit[StringSplit[s, "\n"]] // Association;
 
 
-(* ::Section::Closed:: *)
+(* ::Section:: *)
 (*Helper Functions*)
 
 
-fToLevel[llf_, assoc_] :=
+myprint = Sow @* (Style[#, RGBColor["#ccc"], Bold]&) @* Row @* List;
+
+
+fToLevel[llf_?NumericQ, assoc_Association] :=
     Ramp @ Floor[((llf - Log10[Log10[2]]) / Log10[2] - assoc["b"]) / assoc["a"] + 1];
+fToLevel[in___] :=
+    Throw[myprint @ Style["Error: invalid fToLevel", Hue[{0, .8, .9}]]];
 
 
-getExponent[l_] :=
+getExponent[l_Integer?NonNegative] :=
     Which[
         l < 10,
             0
@@ -114,9 +119,11 @@ getExponent[l_] :=
         True,
             l / 400 + 201
     ] // Floor;
+getExponent[in___] :=
+    Throw[myprint @ Style["Error: invalid getExponent", Hue[{0, .8, .9}]]];
 
 
-toNextExponent[l_] :=
+toNextExponent[l_Integer?NonNegative] :=
     Which[
         l < 10,
             10 - l
@@ -139,37 +146,91 @@ toNextExponent[l_] :=
         True,
             Mod[-l, 400, 1]
     ];
+toNextExponent[in___] :=
+    Throw[myprint @ Style["Error: invalid toNextExponent", Hue[{0, .8, .9}]]];
 
 
-totalVar[l_] := totalVar[l] = l * 2^getExponent[l];
+totalVar[l_Integer?NonNegative] := totalVar[l] =
+    l * 2^getExponent[l];
+totalVar[in___] :=
+    Throw[myprint @ Style["Error: invalid totalVar", Hue[{0, .8, .9}]]];
 
 
-starCost[cur_, d_, a_] :=
+starCost[cur_Integer?NonNegative, d_Integer?NonNegative, a_?(NumericQ @ # && Positive @ #&)] :=
     Sum[Floor[a (cur + i) Exp[a (cur + i) / 200] + 1], {i, 0, d - 1}];
+starCost[in___] :=
+    Throw[myprint @ Style["Error: invalid starCost", Hue[{0, .8, .9}]]];
 
 
 (* ::Section:: *)
 (*Main algorithm*)
 
 
-calcoptBLP[___] = Style["Invalid Input", Hue[{0, .8, .9}]];
-calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 && initstars >= 0 && ex >= 0 :=
-    Block[{vars, ups, upsc, calcpow2, calcpows, iter, dumpf, base, len = Length[varTable], starTable = (Values /* First) /@ starTable // Values, format, prereqs, getcons, prereqm, prereqb, co, po, le, lpo, c, m, b, initpow, stars, resx, resv, heux, heuv, myFirst, myLast, $toler = 10^-9, pows, powsd, ress, grid, weakThreshold, weaks, strongThreshold, strongs, getconsSingle, resx2, myprint},
-        myprint = Sow @* (Style[#, RGBColor["#ccc"], Bold]&) @* Row @* List;
+calcoptBLPWrapper[in___] :=
+    Print[
+        StringReplace[
+            "data:image/png;base64," ~ StringJoin ~ ExportString[
+                im = Rasterize[
+                    MemoryConstrained[
+                        TimeConstrained[
+                            calcoptBLP[in],
+                            10,
+                            myprint @ Style["Error: Timeout", Hue[{0, .8, .9}]]
+                        ],
+                        10*^6,
+                        myprint @ Style["Error: Out of memory", Hue[{0, .8, .9}]]
+                    ] // Catch // Reap // Last // Last // Column,
+                    RasterSize -> 1000, Background -> RGBColor["#222"]
+                ],
+                {"Base64", "PNG"},
+                "ColorMapLength" -> 32,
+                CompressionLevel -> 1,
+                Dithering -> None,
+                IncludeMetaInformation -> {}
+            ],
+            {"\n" -> ""}
+        ]
+    ];
+
+
+calcoptBLP[___] :=
+    Throw[myprint @ Style["Invalid Input", Hue[{0, .8, .9}]]];
+
+
+calcoptBLP[llf_?(NumericQ @ # && # >= 10&), initstars_Integer?NonNegative, Automatic] :=
+    Block[{lpsi, level},
+        lpsi = (llf/25 - 1)/Log2[10]; 
+        level = Clip[Quotient[lpsi, 20, 90], {0, 24}];
+        myprint["Automatic third argument used: ", level];
+        calcoptBLP[llf, initstars, level]
+    ];
+
+
+calcoptBLP[llf_?(NumericQ @ # && # >= 10&), initstars_Integer?NonNegative, ex_Integer /; 0 <= ex <= 24] :=
+    calcoptBLP[llf, initstars, Prepend[Table[Clip[1 + 0.04 * (ex - 2 n), {1, 1.08}], {n, 0, 17}], 9]];
+
+
+calcoptBLP[llf_?(NumericQ @ # && # >= 10&), initstars_Integer?NonNegative, ex_List /; Length[ex] == 19] :=
+    Block[{$RecursionLimit = 10^6, vars, ups, upsc, calcpow2, calcpows, iter, dumpf, base, len = Length[varTable], starTable = (Values /* First) /@ starTable // Values, format, prereqs, getcons, prereqm, prereqb, co, po, le, lpo, c, m, b, initpow, stars, resx, resv, heux, heuv, myFirst, myLast, $toler = 10^-9, pows, powsd, ress, grid, weakThreshold, weaks, strongThreshold, strongs, getconsSingle, resx2, ex2, exps, totex, postpow},
+        ex2 = FoldList[Times, 1, Rest @ ex];
+        totex = Last @ ex2;
+        exps = ex2 / totex;
         vars = fToLevel[llf, #]& /@ varTable // Values;
         ups = fToLevel[llf, #] + 1& /@ upTable // Values;
-        upsc = FoldList[Times, 1, Rest[ups]] // N;
+        upsc = FoldList[Times, 1, Rest[ups]^Most[exps]] // N;
         calcpows[vv_] :=
-            upsc (totalVar /@ vv);
+            upsc (totalVar /@ vv)^exps;
         calcpow2[vv_] := calcpow2[vv] =
             Total[calcpows[vv]];
+        postpow[p_] :=
+            p^totex;
         format[l_] :=
             MapThread[Rule, {Keys[varTable], l}] // Association;
         getcons[i_, s_, prog_:0, costs_:{}, pows_:{}, progs_:{}] :=
             Block[{nprog, cost, pow},
                 nprog = prog + toNextExponent[vars[[i]] + prog];
                 cost = starCost[0, nprog, starTable[[i]]];
-                pow = upsc[[i]] (totalVar[vars[[i]] + nprog] - totalVar[vars[[i]]]) // N;
+                pow = upsc[[i]] (totalVar[vars[[i]] + nprog]^exps[[i]] - totalVar[vars[[i]]]^exps[[i]]) // N;
                 If[cost > s,
                     {costs, pows, progs}
                     ,
@@ -180,7 +241,7 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
             Block[{nprog, cost, pow},
                 nprog = prog + 1;
                 cost = starCost[init, nprog, starTable[[i]]];
-                pow = upsc[[i]] (totalVar[vars[[i]] + init + nprog] - totalVar[vars[[i]] + init]) // N;
+                pow = upsc[[i]] (totalVar[vars[[i]] + init + nprog]^exps[[i]] - totalVar[vars[[i]] + init]^exps[[i]]) // N;
                 If[cost > s,
                     {costs, pows, progs}
                     ,
@@ -200,7 +261,8 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
                 -1
             ];
         Do[
-            {co[i], po[i], le[i]} = getcons[i, initstars]; lpo[i] = Length[po[i]], {i, len}
+            {co[i], po[i], le[i]} = getcons[i, initstars];
+            lpo[i] = Length[po[i]], {i, len}
         ];
         m = ArrayFlatten @ ReplacePart[
             ConstantArray[0, {len + 1, len}], {
@@ -214,9 +276,9 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
         m = DeleteCases[m, {0 ..}];
         b = DeleteCases[b, 0];
         If[Length[c] == 0,
-            Throw[
+            myprint[
                 Style["Error: No doubling found", Hue[{0, .8, .9}]]
-            ]
+            ];
         ];
         myLast[l_List] :=
             If[Length[l] == 0,
@@ -249,7 +311,13 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
         weaks = Position[calcpows[resx + vars], _?(NumericQ @ # && # <= weakThreshold&), {1}, Heads -> False];
         ress = ReplacePart[ress, weaks -> 0];
         resx = ReplacePart[resx, weaks -> 0];
-        strongs = Complement[List /@ Range[len], weaks];
+        strongs =
+            Complement[
+                List /@ Range[len],
+                weaks
+            ];
+        (* Below change was fixed inside getconsSingle (limit 100) *)
+        (*strongs = Select[strongs, 200 ProductLog[(ress[[First @ #]] + initstars - Total @ ress) / 200] / starTable[[First @ #]] - resx[[First @ #]] \[GreaterEqual] 100&];*)
         Do[
             {co[i], po[i], le[i]} = Which[
                 MemberQ[strongs, {i}],
@@ -283,9 +351,9 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
         initpow = calcpow2[vars];
         resv = calcpow2[vars + resx];
         heuv = initpow - heuv;
-        myprint["dump y: ", heuv];
-        myprint["found y: ", resv];
-        myprint["speedup from dump: ", PercentForm[resv / heuv - 1, {Infinity, 4}]];
+        myprint["dump y: ", postpow @ heuv];
+        myprint["found y: ", postpow @ resv];
+        (*myprint["speedup from dump: ", PercentForm[resv / heuv - 1, {Infinity, 4}]];*)
         myprint["stars used: ", Total @ ress];
         myprint["stars left: ", initstars - Total @ ress];
         pows = (calcpows[resx + vars]) / calcpow2[resx + vars];
@@ -334,4 +402,4 @@ calcoptBLP[llf_, initstars_Integer, ex_Integer:0] /; NumericQ[llf] && llf >= 0 &
                 ]& /@ grid
             }
         ]];
-    ] // Reap // Last // Last // Column // Catch;
+    ];
