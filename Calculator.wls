@@ -171,15 +171,24 @@ calcoptBLPWrapper[in___] :=
         StringReplace[
             "data:image/png;base64," ~ StringJoin ~ ExportString[
                 im = Rasterize[
-                    MemoryConstrained[
-                        TimeConstrained[
-                            calcoptBLP[in],
-                            10,
-                            myprint @ Style["Error: Timeout", Hue[{0, .8, .9}]]
-                        ],
-                        10*^6,
-                        myprint @ Style["Error: Out of memory", Hue[{0, .8, .9}]]
-                    ] // Catch // Reap // Last // Last // Column,
+                    Block[{eval},
+                        eval = EvaluationData[
+                            MemoryConstrained[
+                                TimeConstrained[
+                                    calcoptBLP[in],
+                                    10,
+                                    myprint @ Style["Error: Timeout", Hue[{0, .8, .9}]]
+                                ],
+                                10*^6,
+                                myprint @ Style["Error: Out of memory", Hue[{0, .8, .9}]]
+                            ] // Catch // Reap // Last // Last // Column
+                        ];
+                        If[eval["Success"],
+                            eval["Result"]
+                            ,
+                            myprint /@ eval["MessagesExpressions"];
+                        ]
+                    ],
                     RasterSize -> 1000, Background -> RGBColor["#222"]
                 ],
                 {"Base64", "PNG"},
