@@ -197,7 +197,7 @@ calcoptBLP[___] :=
     Throw[myprint @ Style["Invalid Input", Hue[{0, .8, .9}]]];
 
 
-calcoptBLP[llf_?(NumericQ @ # && # >= 10&), initstars_Integer?NonNegative, Automatic] :=
+calcoptBLP[llf_?(NumericQ @ # && # >= 10&), initstars_Integer?NonNegative, Optional[Automatic, Automatic]] :=
     Block[{lpsi, level},
         lpsi = (llf/25 - 1)/Log2[10]; 
         level = Clip[Quotient[lpsi, 20, 90], {0, 24}];
