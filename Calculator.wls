@@ -174,14 +174,14 @@ calcoptBLPWrapper[in___] :=
                     Block[{eval, $Messages},
                         MemoryConstrained[
                             TimeConstrained[
-                                eval = EvaluationData[Catch[calcoptBLP[in]]];
+                                (*eval = EvaluationData[Catch[calcoptBLP[in]]];
                                 If[eval["Success"],
                                     eval["Result"]
                                     ,
                                     myprint["Something went really wrong."];
                                     myprint["Please report your input and this error to Eaux Tacous#1021"];
                                     myprint /@ eval["Messages"];
-                                ],
+                                ]*)Catch[calcoptBLP[in]],
                                 10,
                                 myprint @ Style["Error: Timeout", Hue[{0, .8, .9}]]
                             ],
