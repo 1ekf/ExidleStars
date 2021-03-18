@@ -285,9 +285,9 @@ calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <=
         m = DeleteCases[m, {0 ..}];
         b = DeleteCases[b, 0];
         If[Length[c] == 0,
-            myprint[
-                Style["Error: No doubling found", Hue[{0, .8, .9}]]
-            ];
+            Throw[
+                myprint @ Style["Error: No doubling found", Hue[{0, .8, .9}]]
+            ]
         ];
         myLast[l_List] :=
             If[Length[l] == 0,
