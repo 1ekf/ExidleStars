@@ -171,23 +171,23 @@ calcoptBLPWrapper[in___] :=
         StringReplace[
             "data:image/png;base64," ~ StringJoin ~ ExportString[
                 im = Rasterize[
-                    Block[{eval},
-                        eval = EvaluationData[
-                            MemoryConstrained[
-                                TimeConstrained[
-                                    calcoptBLP[in],
-                                    10,
-                                    myprint @ Style["Error: Timeout", Hue[{0, .8, .9}]]
+                    Block[{eval, $Messages},
+                        MemoryConstrained[
+                            TimeConstrained[
+                                eval = EvaluationData[Catch[calcoptBLP[in]]];
+                                If[eval["Success"],
+                                    eval["Result"]
+                                    ,
+                                    myprint["Something went really wrong."];
+                                    myprint["Please report your input and this error to Eaux Tacous#1021"];
+                                    myprint /@ eval["Messages"];
                                 ],
-                                10*^6,
-                                myprint @ Style["Error: Out of memory", Hue[{0, .8, .9}]]
-                            ] // Catch // Reap // Last // Last // Column
-                        ];
-                        If[eval["Success"],
-                            eval["Result"]
-                            ,
-                            myprint /@ eval["MessagesExpressions"];
-                        ]
+                                10,
+                                myprint @ Style["Error: Timeout", Hue[{0, .8, .9}]]
+                            ],
+                            10*^6,
+                            myprint @ Style["Error: Out of memory", Hue[{0, .8, .9}]]
+                        ] // Reap // Last // Last // Column
                     ],
                     RasterSize -> 1000, Background -> RGBColor["#222"]
                 ],
