@@ -206,20 +206,20 @@ calcoptBLP[___] :=
     Throw[myprint @ Style["Invalid Input", Hue[{0, .8, .9}]]];
 
 
-calcoptBLP[llf_?(NumericQ @ # && # >= 10&), initstars_Integer?NonNegative, Optional[Automatic, Automatic]] :=
+calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 1*^9&), Optional[Automatic, Automatic]] :=
     Block[{lpsi, level},
-        lpsi = (llf/25 - 1)/Log2[10]; 
+        lpsi = (llf / 25 - 1) / Log2[10];
         level = Clip[Quotient[lpsi, 20, 90], {0, 24}];
         myprint["Automatic third argument used: ", level];
         calcoptBLP[llf, initstars, level]
     ];
 
 
-calcoptBLP[llf_?(NumericQ @ # && # >= 10&), initstars_Integer?NonNegative, ex_Integer /; 0 <= ex <= 24] :=
+calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 1*^9&), ex_Integer /; 0 <= ex <= 24] :=
     calcoptBLP[llf, initstars, Prepend[Table[Clip[1 + 0.04 * (ex - 2 n), {1, 1.08}], {n, 0, 17}], 9]];
 
 
-calcoptBLP[llf_?(NumericQ @ # && # >= 10&), initstars_Integer?NonNegative, ex_List /; Length[ex] == 19] :=
+calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 1*^9&), ex_List /; Length[ex] == 19] :=
     Block[{$RecursionLimit = 10^6, vars, ups, upsc, calcpow2, calcpows, iter, dumpf, base, len = Length[varTable], starTable = (Values /* First) /@ starTable // Values, format, prereqs, getcons, prereqm, prereqb, co, po, le, lpo, c, m, b, initpow, stars, resx, resv, heux, heuv, myFirst, myLast, $toler = 10^-9, pows, powsd, ress, grid, weakThreshold, weaks, strongThreshold, strongs, getconsSingle, resx2, ex2, exps, totex, postpow},
         ex2 = FoldList[Times, 1, Rest @ ex];
         totex = Last @ ex2;
