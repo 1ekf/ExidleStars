@@ -90,7 +90,7 @@ starTable = # -> <|"a" -> ToExpression@#2|> & @@@ StringSplit[StringSplit[s, "\n
 myprint = Sow @* (Style[#, RGBColor["#ccc"], Bold]&) @* Row @* List;
 
 
-fToLevel[llf_?NumberQ, assoc_Association] :=
+fToLevel[llf_?NumericQ, assoc_Association] :=
     Ramp @ Floor[((llf - Log10[Log10[2]]) / Log10[2] - assoc["b"]) / assoc["a"] + 1];
 fToLevel[in___] :=
     Throw[myprint @ Style["Error: invalid fToLevel", Hue[{0, .8, .9}]]];
@@ -156,7 +156,7 @@ totalVar[in___] :=
     Throw[myprint @ Style["Error: invalid totalVar", Hue[{0, .8, .9}]]];
 
 
-starCost[cur_Integer?NonNegative, d_Integer?NonNegative, a_?(NumberQ @ # && Positive @ #&)] :=
+starCost[cur_Integer?NonNegative, d_Integer?NonNegative, a_?(NumericQ @ # && Positive @ #&)] :=
     Sum[Floor[a (cur + i) Exp[a (cur + i) / 200] + 1], {i, 0, d - 1}];
 starCost[in___] :=
     Throw[myprint @ Style["Error: invalid starCost", Hue[{0, .8, .9}]]];
@@ -181,6 +181,7 @@ calcoptBLPWrapper[in___] :=
                                     ,
                                     myprint["Something went really wrong."];
                                     myprint["Please report your input and the following error(s) to Eaux Tacous#1021"];
+                                    err=eval;
                                     myprint /@ eval["Messages"];
                                 ],
                                 10,
@@ -207,24 +208,24 @@ calcoptBLP[___] :=
     Throw[myprint @ Style["Invalid Input", Hue[{0, .8, .9}]]];
 
 
-calcoptBLP[llf_, initstars:Except[_Integer]?NumberQ, opt_.] :=
+calcoptBLP[llf_, initstars:Except[_Integer]?NumericQ, opt_.] :=
     calcoptBLP[llf, Round[initstars], opt]
 
 
-calcoptBLP[llf_?(NumberQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 1*^9&), Optional[Automatic, Automatic]] :=
+calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 1*^9&), Optional[Automatic, Automatic]] :=
     Block[{lpsi, level},
         lpsi = (llf / 25 - 1) / Log2[10];
         level = Clip[Quotient[lpsi, 20, 90], {0, 24}];
-        myprint["Automatic third argument used: ", level];
+        myprint["Automatic third argument used: ", level];1/
         calcoptBLP[llf, initstars, level]
     ];
 
 
-calcoptBLP[llf_?(NumberQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 1*^9&), ex_Integer /; 0 <= ex <= 24] :=
+calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 1*^9&), ex_Integer /; 0 <= ex <= 24] :=
     calcoptBLP[llf, initstars, Prepend[Table[Clip[1 + 0.04 * (ex - 2 n), {1, 1.08}], {n, 0, 17}], 9]];
 
 
-calcoptBLP[llf_?(NumberQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 1*^9&), ex_List /; Length[ex] == 19] :=
+calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 1*^9&), ex_List /; Length[ex] == 19] :=
     Block[{$RecursionLimit = 10^6, vars, ups, upsc, calcpow2, calcpows, iter, dumpf, base, len = Length[varTable], starTable = (Values /* First) /@ starTable // Values, format, prereqs, getcons, prereqm, prereqb, co, po, le, lpo, c, m, b, initpow, stars, resx, resv, heux, heuv, myFirst, myLast, $toler = 10^-9, pows, powsd, ress, grid, weakThreshold, weaks, strongThreshold, strongs, getconsSingle, resx2, ex2, exps, totex, postpow},
         ex2 = FoldList[Times, 1, Rest @ ex];
         totex = Last @ ex2;
@@ -311,7 +312,7 @@ calcoptBLP[llf_?(NumberQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 
             ]
         ];
         heuv = heux . c;
-        resx = LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler];
+        resx = Quiet[LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler], LinearProgramming::lpip];
         resx = Internal`PartitionRagged[resx, Array[lpo, len]];
         myFirst[l_List] :=
             If[Length[l] == 0,
@@ -322,7 +323,7 @@ calcoptBLP[llf_?(NumberQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 
         ress = myFirst /@ Pick[Array[co, len], resx, 1];
         resx = myFirst /@ Pick[Array[le, len], resx, 1];
         weakThreshold = 2 * Max[calcpows[resx + vars] / (resx + vars /. 0 -> Infinity)];
-        weaks = Position[calcpows[resx + vars], _?(NumberQ @ # && # <= weakThreshold&), {1}, Heads -> False];
+        weaks = Position[calcpows[resx + vars], _?(NumericQ @ # && # <= weakThreshold&), {1}, Heads -> False];
         ress = ReplacePart[ress, weaks -> 0];
         resx = ReplacePart[resx, weaks -> 0];
         strongs =
@@ -357,7 +358,7 @@ calcoptBLP[llf_?(NumberQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <= 
         m = DeleteCases[m, {0 ..}];
         b = DeleteCases[b, 0];
         If[Length[c] > 0,
-            resx2 = LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler];
+            resx2 = Quiet[LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler], LinearProgramming::lpip];
             resx2 = Internal`PartitionRagged[resx2, Array[lpo, len]];
             ress += myFirst /@ Pick[Array[co, len], resx2, 1];
             resx += myFirst /@ Pick[Array[le, len], resx2, 1];
