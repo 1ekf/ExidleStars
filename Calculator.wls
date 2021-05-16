@@ -1,7 +1,7 @@
 #!/usr/bin/env wolframscript
 (* ::Package:: *)
 
-(* ::Title:: *)
+(* ::Title::Closed:: *)
 (*Optimal Star Distribution Calculator*)
 
 
@@ -83,7 +83,7 @@ s = "y 	1
 starTable = # -> <|"a" -> ToExpression@#2|> & @@@ StringSplit[StringSplit[s, "\n"]] // Association;
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Helper Functions*)
 
 
@@ -93,7 +93,7 @@ myprint = Sow @* (Style[#, RGBColor["#ccc"], Bold]&) @* Row @* List;
 fToLevel[llf_?NumericQ, assoc_Association] :=
     Ramp @ Floor[((llf - Log10[Log10[2]]) / Log10[2] - assoc["b"]) / assoc["a"] + 1];
 fToLevel[in___] :=
-    Throw[myprint @ Style["Error: invalid fToLevel", Hue[{0, .8, .9}]]];
+    Throw[Print @ Style["Error: invalid fToLevel", Hue[{0, .8, .9}]]];
 
 
 getExponent[l_Integer?NonNegative] :=
@@ -120,7 +120,7 @@ getExponent[l_Integer?NonNegative] :=
             l / 400 + 201
     ] // Floor;
 getExponent[in___] :=
-    Throw[myprint @ Style["Error: invalid getExponent", Hue[{0, .8, .9}]]];
+    Throw[Print @ Style["Error: invalid getExponent", Hue[{0, .8, .9}]]];
 
 
 toNextExponent[l_Integer?NonNegative] :=
@@ -147,22 +147,25 @@ toNextExponent[l_Integer?NonNegative] :=
             Mod[-l, 400, 1]
     ];
 toNextExponent[in___] :=
-    Throw[myprint @ Style["Error: invalid toNextExponent", Hue[{0, .8, .9}]]];
+    Throw[Print @ Style["Error: invalid toNextExponent", Hue[{0, .8, .9}]]];
 
 
-totalVar[l_Integer?NonNegative] := totalVar[l] =
+totalVar[l_Integer?NonNegative] :=
     l * 2^getExponent[l];
 totalVar[in___] :=
-    Throw[myprint @ Style["Error: invalid totalVar", Hue[{0, .8, .9}]]];
+    Throw[Print @ Style["Error: invalid totalVar", Hue[{0, .8, .9}]]];
 
+
+starCostHelp =
+    Compile[{{a, _Real}, {cur, _Integer}, {d, _Integer}}, Sum[Floor[a (cur + i) Exp[a (cur + i) / 200] + 1], {i, 0, d - 1}]];
 
 starCost[cur_Integer?NonNegative, d_Integer?NonNegative, a_?(NumericQ @ # && Positive @ #&)] :=
-    Sum[Floor[a (cur + i) Exp[a (cur + i) / 200] + 1], {i, 0, d - 1}];
+    starCostHelp[a, cur, d];
 starCost[in___] :=
-    Throw[myprint @ Style["Error: invalid starCost", Hue[{0, .8, .9}]]];
+    Throw[Print @ Style["Error: invalid starCost", Hue[{0, .8, .9}]]];
 
 
-(* ::Section:: *)
+(* ::Section::Closed:: *)
 (*Main algorithm*)
 
 
@@ -171,30 +174,30 @@ calcoptBLPWrapper[in___] :=
         StringReplace[
             "data:image/png;base64," ~ StringJoin ~ ExportString[
                 im = Rasterize[
-                    Block[{eval, $Messages},
+                    Block[{time, eval, $Messages, Print = myprint},
                         MemoryConstrained[
                             TimeConstrained[
-                                myprint["Inputs: ", ""[in]];
+                                Print["Inputs: ", ""[in]];
                                 eval = EvaluationData[Catch[calcoptBLP[in]]];
+                                Print["Total CPU time: ", eval["Timing"]];
                                 If[eval["Success"],
                                     eval["Result"]
                                     ,
-                                    myprint["Something went really wrong."];
-                                    myprint["Please report your input and the following error(s) to Eaux Tacous#1021"];
-                                    err=eval;
-                                    myprint /@ eval["Messages"];
+                                    Print["Something went really wrong."];
+                                    Print["Please report your input and the following error(s) to Eaux Tacous#1021"];
+                                    Print /@ eval["Messages"];
                                 ],
                                 10,
-                                myprint @ Style["Error: Timeout", Hue[{0, .8, .9}]]
+                                Print @ Style["Error: Timeout", Hue[{0, .8, .9}]]
                             ],
                             100*^6,
-                            myprint @ Style["Error: Out of memory", Hue[{0, .8, .9}]]
-                        ] // Reap // Last // Last // Column
-                    ],
-                    RasterSize -> 1000, Background -> RGBColor["#222"]
+                            Print @ Style["Error: Out of memory", Hue[{0, .8, .9}]]
+                        ]
+                    ] // Reap // Last // Last // Column,
+                    Background -> RGBColor["#36393e"], BaselinePosition -> Center, ImageFormattingWidth -> Infinity, ImageResolution -> 100
                 ],
                 {"Base64", "PNG"},
-                "ColorMapLength" -> 32,
+                "ColorMapLength" -> 20,
                 CompressionLevel -> 1,
                 Dithering -> None,
                 IncludeMetaInformation -> {}
@@ -205,7 +208,7 @@ calcoptBLPWrapper[in___] :=
 
 
 calcoptBLP[___] :=
-    Throw[myprint @ Style["Invalid Input", Hue[{0, .8, .9}]]];
+    Throw[Print @ Style["Invalid Input", Hue[{0, .8, .9}]]];
 
 
 calcoptBLP[llf_, initstars:Except[_Integer]?NumericQ, opt_.] :=
@@ -216,7 +219,7 @@ calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <=
     Block[{lpsi, level},
         lpsi = (llf / 25 - 1) / Log2[10];
         level = Clip[Quotient[lpsi, 20, 90], {0, 24}];
-        myprint["Automatic third argument used: ", level];1/
+        Print["Automatic third argument used: ", level];
         calcoptBLP[llf, initstars, level]
     ];
 
@@ -292,7 +295,7 @@ calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <=
         b = DeleteCases[b, 0];
         If[Length[c] == 0,
             Throw[
-                myprint @ Style["Error: No doubling found", Hue[{0, .8, .9}]]
+                Print @ Style["Error: No doubling found", Hue[{0, .8, .9}]]
             ]
         ];
         myLast[l_List] :=
@@ -312,7 +315,8 @@ calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <=
             ]
         ];
         heuv = heux . c;
-        resx = Quiet[LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler], LinearProgramming::lpip];
+        {time, resx} = Quiet[LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler], LinearProgramming::lpip] // Timing;
+        (*Print["CPU time for passthrough 1: ", time];*)
         resx = Internal`PartitionRagged[resx, Array[lpo, len]];
         myFirst[l_List] :=
             If[Length[l] == 0,
@@ -358,7 +362,8 @@ calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <=
         m = DeleteCases[m, {0 ..}];
         b = DeleteCases[b, 0];
         If[Length[c] > 0,
-            resx2 = Quiet[LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler], LinearProgramming::lpip];
+            {time, resx2} = Quiet[LinearProgramming[Normalize @ c, m, b, Automatic, Integers, Tolerance -> $toler], LinearProgramming::lpip] // Timing;
+            (*Print["CPU time for passthrough 2: ", time];*)
             resx2 = Internal`PartitionRagged[resx2, Array[lpo, len]];
             ress += myFirst /@ Pick[Array[co, len], resx2, 1];
             resx += myFirst /@ Pick[Array[le, len], resx2, 1];
@@ -366,15 +371,15 @@ calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <=
         initpow = calcpow2[vars];
         resv = calcpow2[vars + resx];
         heuv = initpow - heuv;
-        myprint["dump y: ", postpow @ heuv];
-        myprint["found y: ", postpow @ resv];
-        (*myprint["speedup from dump: ", PercentForm[resv / heuv - 1, {Infinity, 4}]];*)
-        myprint["stars used: ", Total @ ress];
-        myprint["stars left: ", initstars - Total @ ress];
+        Print["dump y: ", postpow @ heuv];
+        Print["found y: ", postpow @ resv];
+        (*Print["speedup from dump: ", PercentForm[resv / heuv - 1, {Infinity, 4}]];*)
+        Print["stars used: ", Total @ ress];
+        Print["stars left: ", initstars - Total @ ress];
         pows = (calcpows[resx + vars]) / calcpow2[resx + vars];
         powsd = (calcpows[resx + vars] - calcpows[vars]) / calcpow2[resx + vars];
         grid = {
-            Keys[varTable], vars, resx + vars, NumberForm[#, Infinity, NumberSigns -> {"-", "+"}]& /@ resx, ress, PercentForm[#, {Infinity, 4}]& /@ pows, Table[
+            Keys[varTable], NumberForm[#, Infinity, NumberSigns -> {"-", "+"}]& /@ resx, ress, vars, resx + vars, PercentForm[#, {Infinity, 4}]& /@ pows, Table[
                 Which[
                     resx[[i]] == 0,
                         "none"
@@ -393,8 +398,8 @@ calcoptBLP[llf_?(NumericQ @ # && 10 <= # <= 1*^6&), initstars_Integer?(0 <= # <=
                 ], {i, len}
             ]
         } // Transpose;
-        grid = Prepend[grid, {"variable", "level before", "level after", "\[CapitalDelta] level", "stars used", "power after", "priority"}];
-        myprint[Grid[
+        grid = Prepend[grid, {"variable", "\[CapitalDelta] level", "stars used", "level before", "level after", "power after", "priority"}];
+        Print[Grid[
             grid, Frame -> All, FrameStyle -> Thin, ItemStyle -> {
                 Automatic, Switch[Last @ #,
                     "top",
