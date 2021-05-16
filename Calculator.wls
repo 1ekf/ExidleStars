@@ -194,10 +194,10 @@ calcoptBLPWrapper[in___] :=
                             Print @ Style["Error: Out of memory", Hue[{0, .8, .9}]]
                         ]
                     ] // Reap // Last // Last // Column,
-                    Background -> RGBColor["#36393e"], BaselinePosition -> Center, ImageFormattingWidth -> Infinity, ImageResolution -> 100
+                    Background -> RGBColor["#222"], BaselinePosition -> Center, ImageFormattingWidth -> Infinity, ImageResolution -> 100
                 ],
                 {"Base64", "PNG"},
-                "ColorMapLength" -> 20,
+                "ColorMapLength" -> 24,
                 CompressionLevel -> 1,
                 Dithering -> None,
                 IncludeMetaInformation -> {}
